@@ -8,7 +8,8 @@ import {
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const NAV = [
+type NavItem = { to: string; label: string; icon: React.ComponentType<{ className?: string }>; ownerOnly?: boolean };
+const NAV: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/inventory", label: "Inventory", icon: Package },
   { to: "/sales", label: "Sales", icon: ShoppingCart },
@@ -20,7 +21,7 @@ const NAV = [
   { to: "/reports", label: "Reports", icon: BarChart3 },
   { to: "/employees", label: "Employees", icon: UserCog, ownerOnly: true },
   { to: "/settings", label: "Settings", icon: Settings },
-] as const;
+];
 
 const MOBILE_NAV = NAV.slice(0, 5);
 
@@ -59,7 +60,7 @@ export function AppShell() {
             const Icon = n.icon;
             const active2 = path.startsWith(n.to);
             return (
-              <Link key={n.to} to={n.to}
+              <Link key={n.to} to={n.to as string}
                 className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${active2 ? "bg-primary text-primary-foreground" : "hover:bg-accent"}`}>
                 <Icon className="h-4 w-4" />{n.label}
               </Link>
@@ -98,7 +99,7 @@ export function AppShell() {
             const Icon = n.icon;
             const active2 = path.startsWith(n.to);
             return (
-              <Link key={n.to} to={n.to}
+              <Link key={n.to} to={n.to as string}
                 className={`flex flex-col items-center py-2 text-[10px] ${active2 ? "text-primary" : "text-muted-foreground"}`}>
                 <Icon className="h-5 w-5 mb-0.5" />{n.label}
               </Link>
