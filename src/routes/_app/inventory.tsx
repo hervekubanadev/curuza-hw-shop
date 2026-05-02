@@ -1,0 +1,6 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { InventoryPage } from "@/pages/Inventory";
+export const Route = createFileRoute("/_app/inventory")({
+  head: () => ({ meta: [{ title: "Inventory — CURUZA" }] }),
+  component: InventoryPage,
+});
