@@ -8,11 +8,13 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { formatDateTime } from "@/lib/format";
 
 export function SettingsPage() {
   const { active, refresh, isOwner } = useBusiness();
   const [f, setF] = useState<Record<string,string|number>>({});
   const [saving, setSaving] = useState(false);
+  const [logs, setLogs] = useState<Array<{ id: string; action: string; entity_type: string | null; created_at: string; user_id: string | null }>>([]);
 
   useEffect(() => {
     if (active) setF({
@@ -24,6 +26,13 @@ export function SettingsPage() {
       target_capital: active.target_capital ?? 0, low_stock_default_limit: active.low_stock_default_limit ?? 5,
     });
   }, [active]);
+
+  useEffect(() => {
+    if (!active || !isOwner) return;
+    supabase.from("audit_logs").select("id,action,entity_type,created_at,user_id")
+      .eq("business_id", active.id).order("created_at", { ascending: false }).limit(50)
+      .then(({ data }) => setLogs(data ?? []));
+  }, [active, isOwner]);
 
   const save = async () => {
     if (!active) return; setSaving(true);
@@ -65,6 +74,21 @@ export function SettingsPage() {
         <CardHeader><CardTitle className="text-destructive">Danger zone</CardTitle></CardHeader>
         <CardContent>
           <Button variant="destructive" onClick={reset}>Factory reset business data</Button>
+        </CardContent>
+      </Card>}
+
+      {isOwner && <Card className="mt-6">
+        <CardHeader><CardTitle>Recent activity</CardTitle></CardHeader>
+        <CardContent>
+          {logs.length === 0 ? <p className="text-sm text-muted-foreground">No audit entries yet.</p> :
+            <div className="space-y-1 text-sm max-h-80 overflow-y-auto">
+              {logs.map(l => (
+                <div key={l.id} className="flex justify-between border-b py-2">
+                  <span><span className="font-medium capitalize">{l.action}</span> <span className="text-muted-foreground">{l.entity_type}</span></span>
+                  <span className="text-xs text-muted-foreground">{formatDateTime(l.created_at)}</span>
+                </div>
+              ))}
+            </div>}
         </CardContent>
       </Card>}
 

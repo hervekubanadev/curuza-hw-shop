@@ -9,15 +9,17 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Wallet, Trash2 } from "lucide-react";
+import { Plus, Wallet, Trash2, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { formatRWF, formatDate } from "@/lib/format";
 import { nextReadableId, logAudit } from "@/lib/queries";
 import { CustomerPicker, type Customer } from "@/components/common/CustomerPicker";
 import { ItemPicker, type InvItem } from "@/components/common/ItemPicker";
+import { whatsappLink } from "@/lib/pdf";
 
 type Debt = { id: string; debt_id: string; total_amount: number; amount_paid: number; remaining_amount: number; status: string; date_taken: string; due_date: string | null; customer_id: string; notes: string | null };
 type Line = { item: InvItem; quantity: number; unit_price: number };
+type CustomerMini = { id: string; name: string; phone: string | null };
 
 function statusOf(d: Debt): string {
   if (d.remaining_amount <= 0) return "paid";
@@ -29,6 +31,7 @@ function statusOf(d: Debt): string {
 export function DebtsPage() {
   const { active, isOwner } = useBusiness();
   const [list, setList] = useState<Debt[]>([]);
+  const [customers, setCustomers] = useState<Record<string, CustomerMini>>({});
   const [loading, setLoading] = useState(true);
   const [openNew, setOpenNew] = useState(false);
   const [payDebt, setPayDebt] = useState<Debt | null>(null);
@@ -36,7 +39,16 @@ export function DebtsPage() {
   const load = async () => {
     if (!active) return; setLoading(true);
     const { data } = await supabase.from("debts").select("*").eq("business_id", active.id).order("created_at", { ascending: false });
-    setList((data ?? []) as Debt[]); setLoading(false);
+    const debts = (data ?? []) as Debt[];
+    setList(debts);
+    const ids = Array.from(new Set(debts.map(d => d.customer_id)));
+    if (ids.length) {
+      const { data: cs } = await supabase.from("customers").select("id,name,phone").in("id", ids);
+      const map: Record<string, CustomerMini> = {};
+      (cs ?? []).forEach(c => { map[c.id] = c as CustomerMini; });
+      setCustomers(map);
+    } else setCustomers({});
+    setLoading(false);
   };
   useEffect(() => { load(); }, [active]);
 
@@ -45,6 +57,14 @@ export function DebtsPage() {
     await supabase.from("debts").delete().eq("id", d.id);
     await logAudit(active!.id, "delete", "debt", d.id, d);
     toast.success("Deleted"); load();
+  };
+
+  const remind = (d: Debt) => {
+    const c = customers[d.customer_id];
+    if (!c?.phone) return toast.error("Customer has no phone number");
+    const msg = `Hello ${c.name}, this is a friendly reminder from ${active!.name}. Your outstanding balance is ${formatRWF(d.remaining_amount)}` +
+      (d.due_date ? ` (due ${formatDate(d.due_date)})` : "") + `. Ref: ${d.debt_id}. Thank you.`;
+    window.open(whatsappLink(c.phone, msg), "_blank");
   };
 
   return (
@@ -68,6 +88,11 @@ export function DebtsPage() {
               <div className="flex items-center gap-2">
                 <Badge variant={st === "paid" ? "secondary" : st === "overdue" ? "destructive" : "default"}>{st}</Badge>
                 {d.remaining_amount > 0 && <Button size="sm" onClick={() => setPayDebt(d)}>Pay</Button>}
+                {d.remaining_amount > 0 && customers[d.customer_id]?.phone && (
+                  <Button size="icon" variant="outline" title="Send WhatsApp reminder" onClick={() => remind(d)}>
+                    <MessageCircle className="h-4 w-4 text-green-600"/>
+                  </Button>
+                )}
                 {isOwner && <Button size="icon" variant="ghost" onClick={() => del(d)}><Trash2 className="h-4 w-4 text-destructive"/></Button>}
               </div>
             </CardContent></Card>;
