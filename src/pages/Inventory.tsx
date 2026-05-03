@@ -10,9 +10,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Package, Search, PackagePlus } from "lucide-react";
+import { Plus, Package, Search, PackagePlus, History } from "lucide-react";
 import { toast } from "sonner";
-import { formatRWF, normalizeName } from "@/lib/format";
+import { formatRWF, normalizeName, formatDateTime } from "@/lib/format";
 import { nextReadableId, logAudit } from "@/lib/queries";
 
 type Item = {
@@ -32,6 +32,7 @@ export function InventoryPage() {
   const [filter, setFilter] = useState<"all"|"low"|"out">("all");
   const [openAdd, setOpenAdd] = useState(false);
   const [restockItem, setRestockItem] = useState<Item | null>(null);
+  const [historyItem, setHistoryItem] = useState<Item | null>(null);
 
   const load = async () => {
     if (!active) return;
@@ -102,6 +103,9 @@ export function InventoryPage() {
                 {canManage && <Button size="sm" variant="outline" className="w-full mt-3" onClick={() => setRestockItem(i)}>
                   <PackagePlus className="h-3 w-3 mr-1"/>Restock
                 </Button>}
+                <Button size="sm" variant="ghost" className="w-full mt-1" onClick={() => setHistoryItem(i)}>
+                  <History className="h-3 w-3 mr-1"/>Movements
+                </Button>
               </CardContent>
             </Card>
           ))}
@@ -109,6 +113,7 @@ export function InventoryPage() {
       }
 
       {restockItem && <RestockDialog item={restockItem} onClose={() => { setRestockItem(null); load(); }} />}
+      {historyItem && <HistoryDialog item={historyItem} onClose={() => setHistoryItem(null)} />}
     </div>
   );
 }
