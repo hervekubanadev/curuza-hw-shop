@@ -225,3 +225,40 @@ function RestockDialog({ item, onClose }: { item: Item; onClose: () => void }) {
     </Dialog>
   );
 }
+
+type Movement = { id: string; movement_type: string; quantity_change: number; quantity_before: number; quantity_after: number; reason: string | null; created_at: string };
+
+function HistoryDialog({ item, onClose }: { item: Item; onClose: () => void }) {
+  const [moves, setMoves] = useState<Movement[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    supabase.from("stock_movements").select("id,movement_type,quantity_change,quantity_before,quantity_after,reason,created_at")
+      .eq("inventory_item_id", item.id).order("created_at", { ascending: false }).limit(100)
+      .then(({ data }) => { setMoves((data ?? []) as Movement[]); setLoading(false); });
+  }, [item.id]);
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogHeader><DialogTitle>{item.item_name} — movements</DialogTitle></DialogHeader>
+        {loading ? <p className="text-sm text-muted-foreground">Loading…</p> :
+          moves.length === 0 ? <p className="text-sm text-muted-foreground">No movements yet.</p> :
+          <div className="space-y-1 text-sm">
+            {moves.map(m => (
+              <div key={m.id} className="flex items-center justify-between border-b py-2">
+                <div>
+                  <p className="font-medium capitalize">{m.movement_type}</p>
+                  <p className="text-xs text-muted-foreground">{formatDateTime(m.created_at)}{m.reason ? ` · ${m.reason}` : ""}</p>
+                </div>
+                <div className="text-right">
+                  <p className={Number(m.quantity_change) >= 0 ? "text-green-600 font-medium" : "text-destructive font-medium"}>
+                    {Number(m.quantity_change) >= 0 ? "+" : ""}{m.quantity_change}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{m.quantity_before} → {m.quantity_after}</p>
+                </div>
+              </div>
+            ))}
+          </div>}
+      </DialogContent>
+    </Dialog>
+  );
+}
