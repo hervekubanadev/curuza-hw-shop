@@ -1,0 +1,17 @@
+node_modules
+dist
+.output
+.vinxi
+.git
+.gitignore
+.env
+.env.local
+*.md
+.vscode
+.idea
+.wrangler
+.tanstack
+.nitro
+docs
+bun.lockb
+package-lock.json
